@@ -1,0 +1,155 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.sidebar { transition: width 0.3s ease-in-out; }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+            .a4-side { display: flex; width: 100%; aspect-ratio: 1.414; }
+    .a5-page { flex: 1; }
+
+    /* --- Style dla Generatora Ulotek --- */
+/* --- Style dla Generatora Ulotek v2 --- */
+.leaflet-preview-container {
+    background-color: #e5e7eb;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    /* Używamy czcionki, która jest zbliżona do tej w Twoich materiałach */
+    font-family: 'Open Sans', sans-serif; 
+}
+
+.leaflet-a4-side {
+    display: flex;
+    width: 100%;
+    aspect-ratio: 1.414; /* Proporcje A4 */
+    gap: 1rem;
+    border: 1px solid #d1d5db;
+}
+
+.leaflet-a5-panel {
+    flex: 1;
+    background-color: white;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Ustawienie marginesów wewnętrznych strony */
+.leaflet-page-inner {
+    padding: 0.8cm 1cm; /* Mniejsze marginesy góra/dół, większe boki */
+    font-size: 7.5pt; /* Domyślny rozmiar czcionki */
+    line-height: 1.5;
+    flex-grow: 1;
+    overflow-y: auto; /* Przewijanie jeśli treść się nie mieści */
+}
+.leaflet-page-inner::-webkit-scrollbar { width: 4px; }
+.leaflet-page-inner::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+/* --- Strona 1: Okładka --- */
+.leaflet-cover-contact-bar {
+    text-align: center;
+    font-size: 6pt;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.leaflet-cover-header {
+    width: 100%;
+    height: 10rem;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Nakładka na obrazek dla lepszej czytelności tytułu */
+.leaflet-cover-header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.4), rgba(0,0,0,0.1));
+}
+
+.leaflet-cover-title {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    font-size: 16pt;
+    font-weight: 700;
+    color: white;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+    padding: 0 1rem;
+}
+
+/* --- Strona 4: Tył --- */
+.leaflet-back-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+}
+.leaflet-back-contact-block {
+    font-size: 7pt;
+}
+.leaflet-back-contact-block h4 {
+    font-weight: 700;
+    font-size: 8pt;
+    color: var(--accent-color);
+}
+.leaflet-back-socials i {
+    margin: 0 0.5rem;
+    color: #555;
+}
+.leaflet-back-more-info {
+    font-size: 6.5pt;
+    color: #777;
+    margin: 1rem 0;
+}
+
+/* --- Strony 2 i 3: Wpis Atrakcji --- */
+.leaflet-attraction-entry {
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+.leaflet-attraction-entry:last-child {
+    border-bottom: none;
+}
+.leaflet-attraction-title {
+    font-weight: 700;
+    font-size: 8pt;
+    color: var(--accent-color);
+    text-transform: uppercase;
+}
+.leaflet-attraction-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    line-height: 1.6;
+}
+.leaflet-attraction-icon {
+    margin-right: 0.3rem;
+    color: #aaa;
+    width: 10px; /* Stała szerokość dla wyrównania */
+    text-align: center;
+}
+.leaflet-attraction-description {
+    margin-top: 0.25rem;
+    text-align: justify;
+    font-size: 7pt;
+}
+.leaflet-attraction-hours {
+    font-size: 7pt;
+    margin-top: 0.25rem;
+    background-color: #f9f9f9;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+}
+.leaflet-attraction-hours b {
+    font-weight: 600;
+}
