@@ -11,6 +11,7 @@ import {
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ClassModal from './ClassModal';
 
+// ZASTĄP CAŁY TEN BLOK
 const useStyles = makeStyles({
     card: {
         height: 'fit-content',
@@ -18,11 +19,15 @@ const useStyles = makeStyles({
         flexDirection: 'column',
         gap: tokens.spacingHorizontalS,
         padding: tokens.spacingHorizontalL,
-        border: `1px solid ${tokens.colorNeutralStroke2}`,
+        // Poprawka 1: Zamiast 'border', używamy dokładnych właściwości
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: tokens.colorNeutralStroke2,
         borderRadius: tokens.borderRadiusMedium,
         backgroundColor: tokens.colorNeutralBackground1,
         cursor: 'pointer',
         ':hover': {
+            // Poprawka 2: 'borderColor' jest teraz poprawnie obsługiwane
             borderColor: tokens.colorNeutralStroke2Hover,
         }
     },
@@ -39,46 +44,52 @@ const useStyles = makeStyles({
         flexGrow: 1,
         minWidth: 0,
     },
-    colorSwatch: {
-        width: '32px',
-        height: '32px',
-        borderRadius: tokens.borderRadiusSmall,
-        flexShrink: 0,
-    },
     textContainer: { 
         display: 'flex', 
         flexDirection: 'column',
         minWidth: 0,
     },
-    // ZMIANA NR 1: Dodajemy skracanie do wszystkich stylów tekstu
-    truncate: {
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-    },
+    // Poprawka 3: Przenosimy style 'truncate' do definicji, aby uniknąć błędu 'mergeClasses'
     title: { 
         fontSize: tokens.fontSizeBase300, 
         fontWeight: tokens.fontWeightRegular, 
         color: tokens.colorNeutralForeground1,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
     },
     description: { 
         fontSize: tokens.fontSizeBase200, 
         color: tokens.colorNeutralForeground2,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
     },
     footer: {
-        borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+        borderTopWidth: '1px',
+        borderTopStyle: 'solid',
+        borderTopColor: tokens.colorNeutralStroke2,
         paddingTop: tokens.spacingHorizontalS,
         marginTop: tokens.spacingHorizontalS,
         fontSize: tokens.fontSizeBase200,
     },
     footerText: {
         color: tokens.colorNeutralForeground2,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+    },
+    terminyText: {
+        fontWeight: tokens.fontWeightSemibold,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
     }
 });
 
-const ClassItem = ({ cls, roomName, categoryColor, onEdit, onDelete }) => {
+const ClassItem = ({ cls, roomName, onEdit, onDelete }) => {
     const styles = useStyles();
-    const getDayName = (dayNumber) => ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'So', 'Ndz'][parseInt(dayNumber) - 1] || '';
+    const getDayName = (dayNumber) => ['Ndz', 'Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'So'][parseInt(dayNumber)] || '';
     const terminyText = (cls.terminy || []).map(t => `${getDayName(t.dzienTygodnia)} ${t.godzinaOd}`).join(', ');
 
     return (
@@ -86,11 +97,11 @@ const ClassItem = ({ cls, roomName, categoryColor, onEdit, onDelete }) => {
             <div className={styles.header}>
                 <div className={styles.cardContent}>
                     <div className={styles.icon}>
-                        <ClipboardTextLtr24Regular style={{ color: categoryColor }} />
+                        <ClipboardTextLtr24Regular />
                     </div>
                     <div className={styles.textContainer}>
-                        <Text as="h3" block className={`${styles.title} ${styles.truncate}`} title={cls.nazwa}>{cls.nazwa}</Text>
-                        <Text as="p" block className={`${styles.description} ${styles.truncate}`} title={cls.prowadzacy || 'Brak prowadzącego'}>{cls.prowadzacy || 'Brak prowadzącego'}</Text>
+                        <Text as="h3" block className={styles.title} title={cls.nazwa}>{cls.nazwa}</Text>
+                        <Text as="p" block className={styles.description} title={cls.prowadzacy || 'Brak prowadzącego'}>{cls.prowadzacy || 'Brak prowadzącego'}</Text>
                     </div>
                 </div>
                 <div onClick={(e) => e.stopPropagation()}>
@@ -109,10 +120,10 @@ const ClassItem = ({ cls, roomName, categoryColor, onEdit, onDelete }) => {
             </div>
             <div className={styles.footer}>
                 <div className='flex items-center justify-between'>
-                    <span className={`font-semibold ${styles.truncate}`} title={terminyText}>
+                    <span className={styles.terminyText} title={terminyText}>
                         {terminyText}
                     </span>
-                    <span className={`${styles.footerText} ${styles.truncate}`} title={roomName}>{roomName}</span>
+                    <span className={styles.footerText} title={roomName}>{roomName}</span>
                 </div>
             </div>
         </div>
@@ -120,7 +131,7 @@ const ClassItem = ({ cls, roomName, categoryColor, onEdit, onDelete }) => {
 };
 
 
-export default function ClassesView({ allClasses, allRooms, categoryColors, isLoading, onSaveClass, onDeleteClass }) {
+export default function ClassesView({ allClasses, allRooms, isLoading, onSaveClass, onDeleteClass }) {
     const [isClassModalOpen, setIsClassModalOpen] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
     const [classLocationFilter, setClassLocationFilter] = useState('mikolajki');
@@ -131,15 +142,23 @@ export default function ClassesView({ allClasses, allRooms, categoryColors, isLo
         const month = now.getMonth();
         return month >= 8 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
     }
-    const [currentSchoolYear, setCurrentSchoolYear] = useState(getCurrentSchoolYear());
+const [currentSchoolYear, setCurrentSchoolYear] = useState(getCurrentSchoolYear());
 
-    const handleOpenClassModal = (cls = null) => {
+// --- DODAJ TĘ FUNKCJĘ ---
+const handleSaveAndCloseModal = async (classData) => {
+    // --- DODAJ TĘ LINIĘ ---
+    console.log("Krok 2 (Widok): Odebrano dane do zapisu:", classData);
+
+    await onSaveClass(classData); 
+    setIsClassModalOpen(false);   
+};
+
+const handleOpenClassModal = (cls = null) => {
         setEditingClass(cls);
         setIsClassModalOpen(true);
     };
 
     const getRoomName = (roomId) => allRooms.find(r => r.id === roomId)?.nazwa || 'Brak sali';
-    const getCategoryColor = (item) => categoryColors[`${item.nazwa}-${item.prowadzacy}`] || 'bg-gray-500';
 
     // POPRAWIONA LOGIKA FILTROWANIA
     const filteredClasses = useMemo(() => {
@@ -179,12 +198,11 @@ export default function ClassesView({ allClasses, allRooms, categoryColors, isLo
             <ClassModal 
                 isOpen={isClassModalOpen} 
                 onClose={() => setIsClassModalOpen(false)}
-                onSave={onSaveClass}
+                onSave={handleSaveAndCloseModal}
                 isLoading={isLoading}
                 editingClass={editingClass}
                 rooms={allRooms}
                 schoolYear={currentSchoolYear}
-                categoryColors={categoryColors}
             />
 
             <div className="flex justify-between items-center mb-4">
@@ -213,7 +231,6 @@ export default function ClassesView({ allClasses, allRooms, categoryColors, isLo
                             key={cls.id}
                             cls={cls}
                             roomName={getRoomName(cls.salaId)}
-                            categoryColor={getCategoryColor(cls)}
                             onEdit={handleOpenClassModal}
                             onDelete={onDeleteClass}
                         />

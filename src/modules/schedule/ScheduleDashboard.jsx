@@ -88,7 +88,7 @@ const DashboardButton = ({ icon, title, description, onClick }) => {
     );
 };
 
-export default function ScheduleDashboard({ onNavigate }) {
+export default function ScheduleDashboard({ onNavigate, handlePrint }) {
     const styles = useStyles();
     return (
         <div className={styles.listContainer}>

@@ -3,26 +3,24 @@ import {
     Dialog, DialogSurface, DialogTitle, DialogBody, DialogContent, DialogActions,
     Button, Input, Label, Field, Dropdown, Option, Switch, makeStyles, tokens
 } from "@fluentui/react-components";
-import { Add24Regular, Dismiss24Regular, ArrowRotateClockwise24Regular } from '@fluentui/react-icons';
-import { COLOR_PALETTE } from '../../lib/helpers';
+import { Add24Regular, Dismiss24Regular } from '@fluentui/react-icons';
 
 const useStyles = makeStyles({
     formGrid: { display: 'grid', gap: '16px' },
     twoColumnGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
     threeColumnGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', alignItems: 'flex-end' },
     terminGrid: { display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '8px', alignItems: 'flex-end' },
-    colorPicker: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS },
     fullWidth: { width: '100%' }
 });
 
-export default function ClassModal({ isOpen, onClose, onSave, isLoading, editingClass, rooms, schoolYear, categoryColors }) {
+export default function ClassModal({ isOpen, onClose, onSave, isLoading, editingClass, rooms, schoolYear }) {
     const styles = useStyles();
     const ORGANIZERS = {
         CK: 'Centrum Kultury "Kłobuk"',
         MU3W: 'Mikołajski Uniwersytet III Wieku',
         INNY: 'Inny'
     };
-    const initialClassState = { nazwa: '', salaId: '', prowadzacy: '', platne: false, organizator: ORGANIZERS.CK, organizatorInny: '', okresOd: '', okresDo: '', terminy: [], color: '' };
+    const initialClassState = { nazwa: '', salaId: '', prowadzacy: '', platne: false, organizator: ORGANIZERS.CK, organizatorInny: '', okresOd: '', okresDo: '', terminy: [] };
     const [classData, setClassData] = useState(initialClassState);
     const [validationError, setValidationError] = useState('');
 
@@ -35,7 +33,6 @@ export default function ClassModal({ isOpen, onClose, onSave, isLoading, editing
                      dataToSet.terminy = [{id: Date.now(), dzienTygodnia: '1', godzinaOd: '', godzinaDo: ''}];
                 }
                 const classKey = `${editingClass.nazwa}-${editingClass.prowadzacy}`;
-                dataToSet.color = categoryColors[classKey] || dataToSet.color || COLOR_PALETTE[0];
                 setClassData(dataToSet);
             } else if (!editingClass) {
                  const newClassDefaults = { 
@@ -43,7 +40,6 @@ export default function ClassModal({ isOpen, onClose, onSave, isLoading, editing
                     terminy: [{id: Date.now(), dzienTygodnia: '1', godzinaOd: '', godzinaDo: ''}],
                     rokSzkolny: schoolYear,
                     salaId: rooms.length > 0 ? rooms[0].id : '',
-                    color: COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)]
                 };
                 setClassData(newClassDefaults);
             }
@@ -51,7 +47,7 @@ export default function ClassModal({ isOpen, onClose, onSave, isLoading, editing
         } else {
             setClassData(initialClassState);
         }
-    }, [isOpen, editingClass, rooms, schoolYear, categoryColors]);
+    }, [isOpen, editingClass, rooms, schoolYear]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -79,13 +75,8 @@ export default function ClassModal({ isOpen, onClose, onSave, isLoading, editing
             setClassData(prev => ({...prev, terminy: newTerminy}));
         }
     };
-    
-    const handleChangeColor = () => {
-        const newColor = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
-        setClassData(prev => ({...prev, color: newColor }));
-    };
 
-    const handleSave = () => {
+const handleSave = async () => { // <-- ZMIANA: dodajemy "async"
         if (!classData.nazwa.trim() || !classData.salaId) {
             setValidationError('Nazwa zajęć i sala są wymagane.'); return;
         }
@@ -95,7 +86,12 @@ export default function ClassModal({ isOpen, onClose, onSave, isLoading, editing
         if (classData.organizator === ORGANIZERS.INNY && !classData.organizatorInny.trim()) {
             setValidationError('Proszę wpisać nazwę innego organizatora.'); return;
         }
-        onSave(classData);
+        
+        // ZMIANA: Czekamy na wynik zapisu i zamykamy modal tylko po sukcesie
+        const isSuccess = await onSave(classData);
+        if (isSuccess) {
+            onClose();
+        }
     };
 
     return (
@@ -135,13 +131,6 @@ export default function ClassModal({ isOpen, onClose, onSave, isLoading, editing
                                     {Object.values(ORGANIZERS).map(org => <Option key={org} value={org}>{org}</Option>)}
                                 </Dropdown>
                             </Field>
-                            <div>
-                                <Label>Kolor</Label>
-                                <div className={styles.colorPicker}>
-                                    <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: classData.color }}></div>
-                                    <Button icon={<ArrowRotateClockwise24Regular />} onClick={handleChangeColor} />
-                                </div>
-                            </div>
                         </div>
                         {classData.organizator === ORGANIZERS.INNY && (
                             <Field label="Wpisz nazwę organizatora" required>
@@ -164,12 +153,18 @@ export default function ClassModal({ isOpen, onClose, onSave, isLoading, editing
                             <Label required>Terminy</Label>
                             {(classData.terminy || []).map((termin, index) => (
                                 <div key={termin.id || index} className={styles.terminGrid}>
-                                    <Dropdown 
-                                        value={['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'][termin.dzienTygodnia-1]}
-                                        onOptionSelect={(_, data) => data.optionValue && handleTerminChange(index, 'dzienTygodnia', data.optionValue)}
-                                    >
-                                        <Option value="1">Poniedziałek</Option><Option value="2">Wtorek</Option><Option value="3">Środa</Option><Option value="4">Czwartek</Option><Option value="5">Piątek</Option><Option value="6">Sobota</Option><Option value="7">Niedziela</Option>
-                                    </Dropdown>
+<Dropdown 
+    value={['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'][termin.dzienTygodnia]}
+    onOptionSelect={(_, data) => data.optionValue && handleTerminChange(index, 'dzienTygodnia', data.optionValue)}
+>
+    <Option value="1">Poniedziałek</Option>
+    <Option value="2">Wtorek</Option>
+    <Option value="3">Środa</Option>
+    <Option value="4">Czwartek</Option>
+    <Option value="5">Piątek</Option>
+    <Option value="6">Sobota</Option>
+    <Option value="0">Niedziela</Option> {/* <-- ZMIANA WARTOŚCI */}
+</Dropdown>
                                     <Input type="time" value={termin.godzinaOd} onChange={e => handleTerminChange(index, 'godzinaOd', e.target.value)} />
                                     <Input type="time" value={termin.godzinaDo} onChange={e => handleTerminChange(index, 'godzinaDo', e.target.value)} />
                                     <Button icon={<Dismiss24Regular />} appearance="subtle" onClick={() => removeTermin(index)} disabled={classData.terminy.length <= 1} />

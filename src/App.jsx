@@ -3,7 +3,7 @@ import { useAuth } from './lib/AuthContext.jsx';
 import { db, appId } from './lib/firebase';
 
 // Importy komponentów Fluent UI
-import { FluentProvider, webLightTheme, webDarkTheme } from '@fluentui/react-components';
+import { FluentProvider, webLightTheme, webDarkTheme, makeStyles, tokens } from '@fluentui/react-components';
 
 // Importy naszych komponentów
 import LoadingSpinner from './components/LoadingSpinner';
@@ -24,7 +24,14 @@ import TextsModule from './modules/texts/TextsModule';
 import LeafletsModule from './modules/leaflets/LeafletsModule';
 import ScheduleModule from './modules/schedule/ScheduleModule';
 
+const useStyles = makeStyles({
+    main: {
+        backgroundColor: tokens.colorNeutralBackground2,
+    },
+});
+
 function App() {
+    const styles = useStyles();
     const { user, isLoggedIn, login, logout, isAuthLoading } = useAuth();
     const [activeModule, setActiveModule] = useState('visits');
     const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
@@ -45,6 +52,13 @@ function App() {
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+// Ten hook będzie nasłuchiwał zmian w motywie i aktualizował tło całej strony
+useEffect(() => {
+    // Tło dla całej strony (najgłębsza warstwa)
+    document.body.style.backgroundColor = theme.colorNeutralBackground3;
+    document.body.style.color = theme.colorNeutralForeground1;
+}, [theme]);
 
     const handlePrint = (elementId, title, subtitle, headerDetails, isLandscape = false) => {
       const printNode = document.getElementById(elementId);
@@ -124,7 +138,7 @@ function App() {
 
     return (
         <FluentProvider theme={theme}>
-            <div className="flex h-screen bg-gray-100 text-gray-800">
+            <div className="flex h-screen">
                 <SideMenu 
                     isCollapsed={isMenuCollapsed}
                     setCollapsed={setMenuCollapsed}
@@ -142,7 +156,7 @@ function App() {
                     {isMobileView && !isMenuCollapsed && (
                         <div onClick={() => setMenuCollapsed(true)} className="fixed inset-0 bg-black bg-opacity-50 z-30"></div>
                     )}
-                    <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+                    <main className={`flex-1 p-4 md:p-6 overflow-y-auto ${styles.main}`}>
               {activeModule === 'accommodations' && <AccommodationModule />}
               {activeModule === 'events' && <EventsModule />}
               {activeModule === 'worktime' && <WorkTimeModule />}
@@ -153,7 +167,7 @@ function App() {
               {activeModule === 'gastronomy' && <GastronomyModule db={db} appId={appId} user={user} />}
               {activeModule === 'texts' && <TextsModule />}
               {activeModule === 'leaflets' && <LeafletsModule />}
-              {activeModule === 'schedule' && <ScheduleModule />}
+              {activeModule === 'schedule' && <ScheduleModule handlePrint={handlePrint} />}
                     </main>
                 </div>
             </div>

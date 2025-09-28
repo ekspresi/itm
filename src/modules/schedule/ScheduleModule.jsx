@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { firebaseApi } from '../../lib/firebase';
+import { db, firebaseApi } from '../../lib/firebase';
+import { doc, collection, onSnapshot, updateDoc, addDoc } from "firebase/firestore";
 import ScheduleDashboard from './ScheduleDashboard';
 import RoomsView from './RoomsView';
 import ClassesView from './ClassesView';
@@ -12,7 +13,7 @@ import {
     BreadcrumbDivider,
 } from "@fluentui/react-components";
 
-export default function ScheduleModule() {
+export default function ScheduleModule({ handlePrint }) {
     const [activeSubPage, setActiveSubPage] = useState('dashboard');
     const [isLoading, setIsLoading] = useState(true);
     const [message, setMessage] = useState({ text: '', type: 'info' });
@@ -20,32 +21,33 @@ export default function ScheduleModule() {
     const [allRooms, setAllRooms] = useState([]);
     const [allClasses, setAllClasses] = useState([]);
     const [allEvents, setAllEvents] = useState([]);
-    const [categoryColors, setCategoryColors] = useState({});
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const [fetchedRooms, colorConfig, fetchedClasses, fetchedEvents] = await Promise.all([
-                    firebaseApi.fetchCollection('rooms'),
-                    firebaseApi.fetchDocument('schedule_config', 'categoryColors'), 
-                    firebaseApi.fetchCollection('classes'),
-                    firebaseApi.fetchCollection('events')
-                ]);
-                setAllRooms(fetchedRooms || []);
-                setAllClasses(fetchedClasses || []);
-                setAllEvents(fetchedEvents || []);
-                if (colorConfig) setCategoryColors(colorConfig.map || {});
-            } catch (error) {
-                console.error("Błąd pobierania danych:", error);
-                setMessage({ text: 'Nie udało się pobrać danych.', type: 'error' });
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchData();
-    }, [refreshTrigger]);
+useEffect(() => {
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            // Usunęliśmy "colorConfig" z tej linii
+            const [fetchedRooms, fetchedClasses, fetchedEvents] = await Promise.all([
+                firebaseApi.fetchCollection('rooms'),
+                firebaseApi.fetchCollection('classes'),
+                firebaseApi.fetchCollection('events')
+            ]);
+
+            setAllRooms(fetchedRooms || []);
+            setAllClasses(fetchedClasses || []);
+            setAllEvents(fetchedEvents || []);
+            // Usunęliśmy również poniższy warunek 'if' dotyczący colorConfig
+
+        } catch (error) {
+            console.error("Błąd pobierania danych:", error);
+            setMessage({ text: 'Nie udało się pobrać danych.', type: 'error' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchData();
+}, [refreshTrigger]);
 
     const handleSaveRoom = async (roomData) => {
         setIsLoading(true);
@@ -77,17 +79,28 @@ export default function ScheduleModule() {
 
     const handleSaveClass = async (classData) => {
         setIsLoading(true);
+        const dataToSave = { ...classData };
+
         try {
-            const { color, ...dataToSave } = classData;
-            const classKey = `${dataToSave.nazwa}-${dataToSave.prowadzacy}`;
-            const newColors = { ...categoryColors, [classKey]: color };
-            await firebaseApi.saveDocument('schedule_config', { id: 'categoryColors', map: newColors });
+            // Sprawdzamy, czy zajęcia mają już ID.
+            if (!dataToSave.id) {
+                // Jeśli nie, to są to NOWE zajęcia.
+                // Tworzymy referencję do nowego dokumentu w kolekcji 'classes',
+                // co automatycznie generuje dla niego unikalne ID.
+                const newClassRef = doc(collection(db, 'classes'));
+                dataToSave.id = newClassRef.id;
+            }
+
+            // Zapisujemy dokument w bazie danych.
             await firebaseApi.saveDocument('classes', dataToSave);
-            setMessage({ text: dataToSave.id ? 'Zapisano zmiany.' : 'Dodano zajęcia.', type: 'success' });
+
+            setMessage({ text: classData.id ? 'Zapisano zmiany.' : 'Dodano nowe zajęcia.', type: 'success' });
             setRefreshTrigger(p => p + 1);
+            return true; // Zwracamy informację o sukcesie
         } catch (e) { 
             console.error("Błąd zapisu zajęć:", e);
             setMessage({ text: 'Wystąpił błąd podczas zapisu.', type: 'error' }); 
+            return false; // Zwracamy informację o błędzie
         } finally { 
             setIsLoading(false); 
         }
@@ -228,21 +241,20 @@ const checkConflict = (eventData) => {
             </div>
 
             <div className="flex-grow">
-                {activeSubPage === 'dashboard' && <ScheduleDashboard onNavigate={setActiveSubPage} />}
+                {activeSubPage === 'dashboard' && <ScheduleDashboard onNavigate={setActiveSubPage} handlePrint={handlePrint} />}
                 {activeSubPage === 'pomieszczenia' && <RoomsView allRooms={allRooms} isLoading={isLoading} onSaveRoom={handleSaveRoom} onDeleteRoom={handleDeleteRoom} />}
-                {activeSubPage === 'zajecia' && <ClassesView allClasses={allClasses} allRooms={allRooms} categoryColors={categoryColors} isLoading={isLoading} onSaveClass={handleSaveClass} onDeleteClass={handleDeleteClass} />}
+                {activeSubPage === 'zajecia' && <ClassesView allClasses={allClasses} allRooms={allRooms} isLoading={isLoading} onSaveClass={handleSaveClass} onDeleteClass={handleDeleteClass} />}
                 {activeSubPage === 'wydarzenia' && <EventsView allEvents={allEvents} allRooms={allRooms} isLoading={isLoading} onSaveEvent={handleSaveEvent} onDeleteEvent={handleDeleteEvent} onCheckConflict={checkConflict} />}
                 {activeSubPage === 'harmonogram' && (
                     <ScheduleView
                         allRooms={allRooms}
                         allClasses={allClasses}
                         allEvents={allEvents}
-                        categoryColors={categoryColors}
                         isLoading={isLoading}
                         onCancelClass={handleCancelClass}
                         onEditEvent={handleSaveEvent} // Przekazujemy ogólną funkcję zapisu
                         onDeleteEvent={handleDeleteEvent}
-                        // onPrint={handlePrint} // Można dodać później, jeśli chcemy drukować
+                        handlePrint={handlePrint}
                     />
                 )}
             </div>
