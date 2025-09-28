@@ -198,8 +198,9 @@ const handlePrintClick = () => {
             table { table-layout: fixed; width: 100%; }
             col.time { width: 86px; } 
             col.details { width: auto; }
-            col.organizer { width: 164px; }
-            col.roomName { width: 134px; } 
+            col.organizer { width: 128px; }
+            col.roomName { width: 154px; } 
+            th { text-align: center; }
         </style>
         <table>
             <colgroup>
@@ -236,7 +237,8 @@ const handlePrintClick = () => {
             `;
 
             dayItems.forEach(item => {
-                const roomName = allRooms.find(r => r.id === item.salaId)?.nazwa || 'Brak sali';
+                const room = allRooms.find(r => r.id === item.salaId);
+const roomName = room ? `<strong>${room.numer || ''}</strong>&nbsp;&nbsp;${room.nazwa}` : 'Brak sali';
                 let organizer = item.prowadzacy || item.organizatorInny || item.organizator || '-';
 
                 // ZMIANA NR 2: Dodajemy warunek skracający nazwę
@@ -460,13 +462,23 @@ return (
     <div className="text-left">Sala</div>
 </div>
 
-        {dayItems.map(item => (
-            <ScheduleListItem 
-                key={item.id + item.date + item.godzinaOd}
-                item={item}
-                roomName={allRooms.find(r => r.id === item.salaId)?.nazwa || 'Brak sali'}
-            />
-        ))}
+{dayItems.map(item => {
+    const room = allRooms.find(r => r.id === item.salaId);
+    return (
+        <ScheduleListItem 
+            key={item.id + item.date + item.godzinaOd}
+            item={item}
+            roomName={
+                room ? (
+                    <>
+                        <span style={{ fontWeight: 600 }}>{room.numer}</span>
+                        <span className="ml-2">{room.nazwa}</span>
+                    </>
+                ) : 'Brak sali'
+            }
+        />
+    );
+})}
     </div>
 );
         })}
