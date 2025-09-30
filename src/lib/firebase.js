@@ -71,20 +71,30 @@ if (collectionName === 'texts_entries') return `texts_module/--data--/entries`;
         return `schedule_module/--data--/${collectionName}`;
     }
 
+    const inventoryModuleCollections = ['locations', 'items', 'censuses'];
+    if (inventoryModuleCollections.includes(collectionName)) {
+        return `inventory_module/--data--/${collectionName}`;
+    }
+
 
         // --- Pozostałe moduły ---
         return `/artifacts/${appId}/public/data/${collectionName}`;
     },
 
-    saveDocument: function(collectionName, data, isRoot = false) {
-        const { id, ...dataToSave } = data;
-        const fullPath = this._getFullPath(collectionName, isRoot);
-        if (id) {
-            return db.collection(fullPath).doc(id).set(dataToSave, { merge: true });
-        } else {
-            return db.collection(fullPath).add(dataToSave);
-        }
-    },
+saveDocument: async function(collectionName, data, isRoot = false) {
+    const { id, ...dataToSave } = data;
+    const fullPath = this._getFullPath(collectionName, isRoot);
+    
+    if (id) {
+        // Logika dla aktualizacji istniejącego dokumentu
+        await db.collection(fullPath).doc(id).set(dataToSave, { merge: true });
+        return id; // Zwracamy istniejące ID
+    } else {
+        // Logika dla tworzenia nowego dokumentu
+        const newDocRef = await db.collection(fullPath).add(dataToSave);
+        return newDocRef.id; // <-- Kluczowa zmiana: Zwracamy ID nowo utworzonego dokumentu
+    }
+},
 
     deleteDocument: function(collectionName, docId, isRoot = false) {
         const fullPath = this._getFullPath(collectionName, isRoot);
@@ -112,7 +122,32 @@ if (collectionName === 'texts_entries') return `texts_module/--data--/entries`;
             return null;
         }
     },
+
+        // --- POCZĄTEK NOWEGO KODU ---
+
+    fetchSubcollection: async function(path) {
+        const snapshot = await db.collection(path).get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    },
+
+    saveDocumentInSubcollection: function(path, data) {
+        const { id, ...dataToSave } = data;
+        if (id) {
+            return db.collection(path).doc(id).set(dataToSave, { merge: true });
+        } else {
+            // Generujemy ID po stronie klienta, aby było dostępne od razu
+            const newDocRef = db.collection(path).doc();
+            dataToSave.id = newDocRef.id;
+            return newDocRef.set(dataToSave);
+        }
+    },
+
+    deleteDocumentFromSubcollection: function(path, docId) {
+        return db.collection(path).doc(docId).delete();
+    },
 };
+
+
 
 export const callCloudFunction = async (functionName, data = {}) => {
     // Upewnij się, że użytkownik jest zalogowany

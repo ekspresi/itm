@@ -23,6 +23,7 @@ import GastronomyModule from './modules/gastronomy/GastronomyModule';
 import TextsModule from './modules/texts/TextsModule';
 import LeafletsModule from './modules/leaflets/LeafletsModule';
 import ScheduleModule from './modules/schedule/ScheduleModule';
+import InventoryModule from './modules/inventory/InventoryModule';
 
 const useStyles = makeStyles({
     main: {
@@ -168,6 +169,7 @@ useEffect(() => {
               {activeModule === 'texts' && <TextsModule />}
               {activeModule === 'leaflets' && <LeafletsModule />}
               {activeModule === 'schedule' && <ScheduleModule handlePrint={handlePrint} />}
+              {activeModule === 'inventory' && <InventoryModule handlePrint={handlePrint} />}
                     </main>
                 </div>
             </div>

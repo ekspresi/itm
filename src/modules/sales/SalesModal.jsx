@@ -1,62 +1,100 @@
-import React, { useState, useEffect } from 'react';
-import Modal from '../../components/Modal';
-import FormField from '../../components/FormField';
-import NumberInput from '../../components/NumberInput';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+    Dialog,
+    DialogSurface,
+    DialogTitle,
+    DialogBody,
+    DialogActions,
+    DialogContent,
+    Button,
+    Input,
+    Field,
+    makeStyles,
+    tokens,
+} from '@fluentui/react-components';
+
+const useStyles = makeStyles({
+    content: {
+        display: 'flex',
+        flexDirection: 'column',
+        rowGap: tokens.spacingVerticalM,
+    },
+    grid: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: tokens.spacingHorizontalM,
+    },
+});
 
 export default function SalesModal({ isOpen, onClose, onSave, isLoading, existingData, defaultDate }) {
-    const [sale, setSale] = useState({});
-    const [validationError, setValidationError] = useState('');
+    const styles = useStyles();
+    const [formData, setFormData] = useState({});
 
     useEffect(() => {
         if (isOpen) {
-            const initialData = existingData 
-                ? { ...existingData } 
-                : { date: defaultDate || new Date().toISOString().slice(0, 10), totalAmount: '', cardAmount: '', invoiceAmount: '' };
-            setSale(initialData);
-            setValidationError('');
+            const initialData = {
+                id: existingData?.id || null,
+                date: existingData?.date || defaultDate || new Date().toISOString().slice(0, 10),
+                totalAmount: existingData?.totalAmount || '',
+                cardAmount: existingData?.cardAmount || '',
+                invoiceAmount: existingData?.invoiceAmount || '',
+            };
+            setFormData(initialData);
         }
     }, [isOpen, existingData, defaultDate]);
 
-    const handleChange = (field, value) => {
-        setSale(prev => ({ ...prev, [field]: value }));
+    const cashAmount = useMemo(() => {
+        const total = parseFloat(String(formData.totalAmount || '0').replace(',', '.'));
+        const card = parseFloat(String(formData.cardAmount || '0').replace(',', '.'));
+        const invoice = parseFloat(String(formData.invoiceAmount || '0').replace(',', '.'));
+        if (isNaN(total)) return '0.00';
+        return (total - card - invoice).toFixed(2);
+    }, [formData.totalAmount, formData.cardAmount, formData.invoiceAmount]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSaveClick = () => {
-        if (!sale.date || !sale.totalAmount) {
-            setValidationError('Pola z gwiazdką (*) są wymagane.');
-            return;
-        }
-        onSave(sale);
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave(formData);
     };
-
-    const isSaveDisabled = !sale.date || String(sale.totalAmount).trim() === '';
-
-    const modalFooter = (
-        <>
-            <button onClick={onClose} disabled={isLoading} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Anuluj</button>
-            <button 
-                onClick={handleSaveClick} 
-                disabled={isLoading || isSaveDisabled} 
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-gray-400"
-            >
-                {isLoading ? 'Zapisywanie...' : (existingData ? 'Zapisz zmiany' : 'Zapisz')}
-            </button>
-        </>
-    );
-
-    const title = existingData ? `Edytuj sprzedaż z dnia: ${existingData.date}` : "Dodaj sprzedaż dzienną";
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={title} footer={modalFooter} maxWidth="max-w-xl">
-            <div className="grid md:grid-cols-2 gap-4">
-                <FormField label="Data raportu *">
-                    <input type="date" value={sale.date || ''} onChange={e => handleChange('date', e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm" />
-                </FormField>
-                <NumberInput label="Suma z kasy fiskalnej *" value={sale.totalAmount} onChange={val => handleChange('totalAmount', val)} />
-                <NumberInput label="W tym płatności terminalem" value={sale.cardAmount} onChange={val => handleChange('cardAmount', val)} />
-                <NumberInput label="W tym faktury przelewowe" value={sale.invoiceAmount} onChange={val => handleChange('invoiceAmount', val)} />
-            </div>
-             {validationError && (<div className="pt-4 text-center"><p className="text-red-600 font-semibold">{validationError}</p></div>)}
-        </Modal>
+        <Dialog open={isOpen} onOpenChange={(e, data) => !data.open && onClose()}>
+            <DialogSurface>
+                <form onSubmit={handleSubmit}>
+                    <DialogBody>
+                        <DialogTitle>{existingData ? 'Edytuj wpis sprzedaży' : 'Dodaj nowy wpis sprzedaży'}</DialogTitle>
+                        <DialogContent className={styles.content}>
+                            <Field label="Data" required>
+                                <Input name="date" type="date" value={formData.date || ''} onChange={handleChange} />
+                            </Field>
+                            <div className={styles.grid}>
+                                <Field label="Kwota sprzedaży (łącznie)" required>
+                                    <Input name="totalAmount" type="number" step="0.01" value={formData.totalAmount || ''} onChange={handleChange} />
+                                </Field>
+                                <Field label="Płatność terminalem">
+                                    <Input name="cardAmount" type="number" step="0.01" value={formData.cardAmount || ''} onChange={handleChange} />
+                                </Field>
+                                <Field label="Płatność przelewem">
+                                    <Input name="invoiceAmount" type="number" step="0.01" value={formData.invoiceAmount || ''} onChange={handleChange} />
+                                </Field>
+                                <Field label="Wyliczono gotówki">
+                                    <Input value={cashAmount.replace('.', ',')} readOnly disabled />
+                                </Field>
+                            </div>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button type="button" appearance="secondary" onClick={onClose} disabled={isLoading}>Anuluj</Button>
+                            <Button type="submit" appearance="primary" disabled={isLoading}>
+                                {isLoading ? 'Zapisywanie...' : 'Zapisz'}
+                            </Button>
+                        </DialogActions>
+                    </DialogBody>
+                </form>
+            </DialogSurface>
+        </Dialog>
     );
-};
+}

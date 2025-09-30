@@ -201,6 +201,15 @@ const handlePrintClick = () => {
             col.organizer { width: 128px; }
             col.roomName { width: 154px; } 
             th { text-align: center; }
+                .event-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #0f766e; /* Kolor Teal-700, taki jak w siatce */
+        margin-left: 8px;
+        vertical-align: middle; /* Dla lepszego wyrównania z tekstem */
+    }
         </style>
         <table>
             <colgroup>
@@ -213,7 +222,7 @@ const handlePrintClick = () => {
                 <tr>
                     <th>Godzina</th>
                     <th>Zajęcia / Wydarzenie</th>
-                    <th>Prowadzący / Organizator</th>
+                    <th>Prowadzący Organizator</th>
                     <th>Sala</th>
                 </tr>
             </thead>
@@ -246,15 +255,24 @@ const roomName = room ? `<strong>${room.numer || ''}</strong>&nbsp;&nbsp;${room.
                     organizer = 'MUTW';
                 }
 
-                tableHtml += `
-                    <tr>
-                        <td>${item.godzinaOd} - ${item.godzinaDo}</td>
-                        <td>${item.nazwa}</td>
-                        <td>${organizer}</td>
-                        <td>${roomName}</td>
-                    </tr>
-                `;
-            });
+    // --- POCZĄTEK ZMIANY ---
+    // Tworzymy zmienną, która przechowa HTML dla nazwy zajęć/wydarzenia
+    let itemNameHtml = item.nazwa;
+    // Jeśli typ to 'event', dodajemy kropkę
+    if (item.type === 'event') {
+        itemNameHtml += `<span class="event-dot"></span>`;
+    }
+    // --- KONIEC ZMIANY ---
+
+    tableHtml += `
+        <tr>
+            <td>${item.godzinaOd} - ${item.godzinaDo}</td>
+            <td>${itemNameHtml}</td>
+            <td>${organizer}</td>
+            <td>${roomName}</td>
+        </tr>
+    `;
+});
         }
     });
     tableHtml += '</tbody></table>';

@@ -1,68 +1,103 @@
 import React, { useState, useEffect } from 'react';
-import Modal from '../../components/Modal';
-import FormField from '../../components/FormField';
-import NumberInput from '../../components/NumberInput';
+import {
+    Dialog,
+    DialogTrigger,
+    DialogSurface,
+    DialogTitle,
+    DialogBody,
+    DialogActions,
+    DialogContent,
+    Button,
+    Input,
+    Field,
+    makeStyles,
+    tokens
+} from '@fluentui/react-components';
+import { Dismiss24Regular } from '@fluentui/react-icons';
+
+const useStyles = makeStyles({
+    content: {
+        display: 'flex',
+        flexDirection: 'column',
+        rowGap: tokens.spacingVerticalM,
+    },
+     // Style dla siatki
+    grid: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: tokens.spacingHorizontalM,
+    },
+});
 
 export default function SettlementModal({ isOpen, onClose, onSave, isLoading, existingData, reportMonth }) {
-    const [settlementData, setSettlementData] = useState({});
-    const [validationError, setValidationError] = useState('');
+    const styles = useStyles();
+    const [formData, setFormData] = useState({});
+    
+    const monthName = new Date(reportMonth + '-02').toLocaleString('pl-PL', { month: 'long', year: 'numeric' });
 
     useEffect(() => {
         if (isOpen) {
-            const initialData = existingData || {
-                settlementMonth: reportMonth, purchaseNet: '', margin: '', salesNet: '',
-                vat: '', salesGross: '', bankDeposit: ''
+            const initialData = {
+                purchaseNet: existingData?.purchaseNet || '',
+                margin: existingData?.margin || '',
+                salesNet: existingData?.salesNet || '',
+                vat: existingData?.vat || '',
+                salesGross: existingData?.salesGross || '',
+                bankDeposit: existingData?.bankDeposit || '',
             };
-            setSettlementData(initialData);
-            setValidationError('');
+            setFormData(initialData);
         }
-    }, [isOpen, existingData, reportMonth]);
+    }, [isOpen, existingData]);
 
-    const handleChange = (field, value) => {
-        setSettlementData(prev => ({ ...prev, [field]: value }));
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSaveClick = () => {
-        onSave(settlementData);
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({ ...formData, settlementMonth: reportMonth });
     };
-
-    // Sprawdzamy, czy którekolwiek z pól jest puste
-    const isSaveDisabled = Object.values(settlementData).some(val => String(val).trim() === '');
-
-    const modalFooter = (
-        <>
-            <button onClick={onClose} disabled={isLoading} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Anuluj</button>
-            <button 
-                onClick={handleSaveClick} 
-                disabled={isLoading || isSaveDisabled} 
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg disabled:bg-gray-400"
-            >
-                {isLoading ? 'Zapisywanie...' : (existingData ? 'Zapisz zmiany' : 'Zapisz rozliczenie')}
-            </button>
-        </>
-    );
-    
-    const title = existingData 
-        ? `Edytuj rozliczenie dla: ${new Date(existingData.settlementMonth + '-02').toLocaleString('pl-PL', { month: 'long', year: 'numeric' })}`
-        : "Dodaj nowe rozliczenie miesięczne";
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={title} footer={modalFooter} maxWidth="max-w-3xl">
-            <div className="space-y-4">
-                <div className="grid md:grid-cols-3 gap-4">
-                    <FormField label="Miesiąc rozliczenia *">
-                        <input type="month" value={settlementData.settlementMonth || ''} onChange={e => handleChange('settlementMonth', e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm" />
-                    </FormField>
-                    <NumberInput label="Wartość zakupu netto *" value={settlementData.purchaseNet} onChange={val => handleChange('purchaseNet', val)} />
-                    <NumberInput label="Marża *" value={settlementData.margin} onChange={val => handleChange('margin', val)} />
-                    <NumberInput label="Wartość sprzedaży netto *" value={settlementData.salesNet} onChange={val => handleChange('salesNet', val)} />
-                    <NumberInput label="VAT *" value={settlementData.vat} onChange={val => handleChange('vat', val)} />
-                    <NumberInput label="Wartość sprzedaży brutto *" value={settlementData.salesGross} onChange={val => handleChange('salesGross', val)} />
-                </div>
-                <div className="border-t pt-4">
-                     <NumberInput label="Wpłacono na rachunek bankowy *" value={settlementData.bankDeposit} onChange={val => handleChange('bankDeposit', val)} />
-                </div>
-            </div>
-        </Modal>
+        <Dialog open={isOpen} onOpenChange={(e, data) => !data.open && onClose()}>
+            <DialogSurface>
+                <form onSubmit={handleSubmit}>
+                    <DialogBody>
+                        <DialogTitle>
+                            {existingData ? 'Edytuj' : 'Dodaj'} rozliczenie za {monthName}
+                        </DialogTitle>
+                        <DialogContent className={styles.content}>
+                           <div className={styles.grid}>
+                                <Field label="Zakup netto">
+                                    <Input name="purchaseNet" value={formData.purchaseNet || ''} onChange={handleChange} type="number" step="0.01" />
+                                </Field>
+                                <Field label="Marża">
+                                    <Input name="margin" value={formData.margin || ''} onChange={handleChange} type="number" step="0.01" />
+                                </Field>
+                                <Field label="Sprzedaż netto">
+                                    <Input name="salesNet" value={formData.salesNet || ''} onChange={handleChange} type="number" step="0.01" />
+                                </Field>
+                                <Field label="VAT">
+                                    <Input name="vat" value={formData.vat || ''} onChange={handleChange} type="number" step="0.01" />
+                                </Field>
+                                <Field label="Sprzedaż brutto">
+                                    <Input name="salesGross" value={formData.salesGross || ''} onChange={handleChange} type="number" step="0.01" />
+                                </Field>
+                                <Field label="Wpłata bankowa">
+                                    <Input name="bankDeposit" value={formData.bankDeposit || ''} onChange={handleChange} type="number" step="0.01" />
+                                </Field>
+                            </div>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button type="button" appearance="secondary" onClick={onClose} disabled={isLoading}>Anuluj</Button>
+                            <Button type="submit" appearance="primary" disabled={isLoading}>
+                                {isLoading ? 'Zapisywanie...' : 'Zapisz'}
+                            </Button>
+                        </DialogActions>
+                    </DialogBody>
+                </form>
+            </DialogSurface>
+        </Dialog>
     );
-};
+}

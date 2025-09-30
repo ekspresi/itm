@@ -31,6 +31,7 @@ export default function SideMenu({ isCollapsed, setCollapsed, isMobileView, onLo
         category: "ZARZĄDZANIE", // To jest nowa kategoria z pliku ckklobuk.html
         items: [
             { id: 'schedule', label: 'Harmonogram sal', icon: 'fa-solid fa-calendar-week' }, 
+            { id: 'inventory', label: 'Inwentaryzacja', icon: 'fa-solid fa-boxes-stacked' },
         ]
     }
     ];
