@@ -75,8 +75,10 @@ if (collectionName === 'texts_entries') return `texts_module/--data--/entries`;
     if (inventoryModuleCollections.includes(collectionName)) {
         return `inventory_module/--data--/${collectionName}`;
     }
-
-
+    const orangeLabModuleCollections = ['legoSets', 'participants', 'gamingEquipment', 'buildHistory', 'gameLibrary', 'stations'];
+        if (orangeLabModuleCollections.includes(collectionName)) {
+            return `orangeLab_module/--data--/${collectionName}`;
+    }
         // --- Pozostałe moduły ---
         return `/artifacts/${appId}/public/data/${collectionName}`;
     },

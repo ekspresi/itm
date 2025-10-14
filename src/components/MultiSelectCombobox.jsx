@@ -1,76 +1,61 @@
-import React, { useState, useEffect } from 'react';
-import {
-    Combobox,
-    Option,
-    makeStyles,
-    useId,
-    Label,
-} from "@fluentui/react-components";
+import React, { useState, useMemo } from 'react';
+import { Combobox, Option, Tag, TagGroup } from "@fluentui/react-components";
 
-const useStyles = makeStyles({
-    root: {
-        display: "grid",
-        gridTemplateRows: "repeat(1fr)",
-        justifyItems: "start",
-        gap: "2px",
-        maxWidth: "400px",
-    },
-});
+export default function MultiSelectCombobox({ options, selectedOptions, setSelectedOptions, placeholder }) {
+    const [value, setValue] = useState('');
 
-export default function MultiSelectCombobox({ label, options, placeholder, selectedIds, onSelectionChange }) {
-    const styles = useStyles();
-    const comboId = useId(label);
-
-    // Znajdź nazwy wybranych opcji na podstawie przekazanych ID
-    const selectedNames = selectedIds
-        .map(id => options.find(opt => opt.id === id)?.name)
-        .filter(Boolean);
-
-    const [value, setValue] = useState(selectedNames.join(", "));
-
-    // Aktualizuj wartość w polu, gdy zmienią się zewnętrzne propsy
-    useEffect(() => {
-        setValue(selectedNames.join(", "));
-    }, [selectedIds, options]);
-
-    const onSelect = (_, data) => {
-        onSelectionChange(data.selectedOptions);
-        setValue(""); // Czyścimy pole po wyborze
+    const handleSelect = (event, data) => {
+        if (data.optionValue) {
+            const selected = options.find(opt => opt.id === data.optionValue);
+            if (selected && !selectedOptions.some(opt => opt.id === selected.id)) {
+                setSelectedOptions([...selectedOptions, selected]);
+            }
+        }
+        setValue(''); // Wyczyść pole tekstowe po wyborze
     };
 
-    const onFocus = () => {
-        setValue(""); // Czyścimy pole, gdy użytkownik chce zacząć pisać
+    const handleTagDismiss = (dismissedId) => {
+        setSelectedOptions(selectedOptions.filter(opt => opt.id !== dismissedId));
     };
+    
+    // POPRAWIONA LOGIKA: Filtrujemy opcje na podstawie wprowadzonego tekstu
+    const filteredOptions = useMemo(() => {
+        if (!value) {
+            // Jeśli nic nie wpisano, pokaż wszystkie opcje, które nie są jeszcze wybrane
+            return options.filter(opt => !selectedOptions.some(sel => sel.id === opt.id));
+        }
+        // Jeśli coś wpisano, filtruj po etykiecie
+        const lowercasedValue = value.toLowerCase();
+        return options.filter(opt => 
+            !selectedOptions.some(sel => sel.id === opt.id) &&
+            opt.label.toLowerCase().includes(lowercasedValue)
+        );
+    }, [value, options, selectedOptions]);
 
-    const onBlur = () => {
-        // Po utracie fokusu, pokaż wybrane opcje
-        setValue(selectedNames.join(", "));
-    };
-
-    const onChange = (event) => {
-        setValue(event.target.value); // Aktualizuj tekst podczas pisania
-    };
 
     return (
-        <div className={styles.root}>
-            <Label id={comboId}>{label}</Label>
+        <div className="flex flex-col gap-2">
             <Combobox
-                aria-labelledby={comboId}
-                multiselect={true}
                 placeholder={placeholder}
                 value={value}
-                onFocus={onFocus}
-                onBlur={onBlur}
-                onChange={onChange}
-                onOptionSelect={onSelect}
-                selectedOptions={selectedIds} // Synchronizujemy wybrane opcje
+                onChange={(e) => setValue(e.target.value)}
+                onOptionSelect={handleSelect}
             >
-                {options.map((option) => (
+                {filteredOptions.map(option => (
                     <Option key={option.id} value={option.id}>
-                        {option.name}
+                        {option.label}
                     </Option>
                 ))}
             </Combobox>
+            {selectedOptions.length > 0 && (
+                <TagGroup onDismiss={(_, data) => handleTagDismiss(data.value)}>
+                    {selectedOptions.map(option => (
+                        <Tag key={option.id} value={option.id}>
+                            {option.label}
+                        </Tag>
+                    ))}
+                </TagGroup>
+            )}
         </div>
     );
 }

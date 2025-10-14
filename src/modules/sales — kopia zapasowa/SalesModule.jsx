@@ -1,53 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { firebaseApi } from '../../lib/firebase';
-import { SHARED_STYLES, getPrintHeaderDetails } from '../../lib/helpers'; // <-- ZAKTUALIZUJ TĘ LINIĘ
+import { SHARED_STYLES } from '../../lib/helpers';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import MessageBox from '../../components/MessageBox';
-import FluentKpiCard, { ComparisonIndicator } from '../../components/FluentKpiCard';
-import PaymentSplitCard from '../../components/PaymentSplitCard';
+import KpiCard, { ComparisonIndicator } from '../../components/KpiCard';
 import SalesToolbar from './SalesToolbar';
 import SalesModal from './SalesModal';
 import SettlementModal from './SettlementModal';
 import SalesComparisonTab from './SalesComparisonTab';
-import SalesDashboard from './SalesDashboard'; // <-- NOWY IMPORT
-import SalesSettlement from './SalesSettlement';
-import Breadcrumbs from '../../components/Breadcrumbs';
 import { SalesDailyChart, SalesAnnualChart } from './SalesCharts';
 import { PrintableMonthlyReport, PrintableAnnualReport, PrintableMonthlyDetails, PrintableAnnualDetails } from './PrintableReports';
 import { formatCurrency } from './salesHelpers';
-import { // <-- NOWY IMPORT
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbButton,
-    BreadcrumbDivider,
-} from "@fluentui/react-components";
-import { // <-- NOWE IMPORTY IKON
-    Money24Regular,
-    DataTrending24Regular,
-    Trophy24Regular,
-    CalendarCheckmark24Regular,
-    Wallet24Regular,
-} from '@fluentui/react-icons';
 
 export default function SalesModule({ user, handlePrint }) {
     // === STANY KOMPONENTU ===
     const [isLoading, setIsLoading] = useState(true);
     const [message, setMessage] = useState({ text: '', type: 'info' });
     const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
-    const [salesData, setSalesData] = useState(null);
-    const [settlementData, setSettlementData] = useState(null);
+    const [salesData, setSalesData] = useState(null); 
+    const [settlementData, setSettlementData] = useState(null); 
     const [isSaleModalOpen, setSaleModalOpen] = useState(false);
     const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
     const [editingSale, setEditingSale] = useState(null);
     const [editingSettlement, setEditingSettlement] = useState(null);
-    const [activeSubPage, setActiveSubPage] = useState('dashboard'); // <-- ZMIANA Z activeTab
+    const [activeTab, setActiveTab] = useState('monthly');
     const [reportYear, setReportYear] = useState(new Date().getFullYear());
     const [annualData, setAnnualData] = useState(null);
+    // NOWY STAN: Przechowuje domyślną datę dla nowego wpisu
     const [defaultSaleDate, setDefaultSaleDate] = useState('');
     const [isDailyReportVisible, setIsDailyReportVisible] = useState(false);
 
-    // ... (reszta funkcji bez zmian: findNextAvailableDate, handleFetchReport, handleFetchAnnualReport, etc.) ...
-        const findNextAvailableDate = (month, existingEntries = []) => {
+    // NOWA FUNKCJA: Znajduje pierwszy wolny dzień w miesiącu
+    const findNextAvailableDate = (month, existingEntries = []) => {
         const [year, monthNum] = month.split('-').map(Number);
         const daysInMonth = new Date(year, monthNum, 0).getDate();
         const existingDates = new Set(existingEntries.map(e => e.date));
@@ -55,11 +39,11 @@ export default function SalesModule({ user, handlePrint }) {
         for (let day = 1; day <= daysInMonth; day++) {
             const currentDate = `${month}-${String(day).padStart(2, '0')}`;
             if (!existingDates.has(currentDate)) {
-                return currentDate;
+                return currentDate; // Znaleziono pierwszy wolny dzień
             }
         }
         
-        return `${month}-01`;
+        return `${month}-01`; // Jeśli wszystkie dni są zajęte, zwróć pierwszy dzień miesiąca
     };
 
 const handleFetchReport = async (month) => {
@@ -134,6 +118,8 @@ const handleFetchReport = async (month) => {
             card: { amount: totalCard, percent: getPercentage(totalCard, totalSales) },
             invoice: { amount: totalInvoice, percent: getPercentage(totalInvoice, totalSales) },
         };
+
+        // POPRAWKA JEST TUTAJ - dodajemy brakujące pola `diff`
         const kpiData = {
             cashBalance,
             ytdTotalSales: { 
@@ -265,23 +251,23 @@ const handleFetchAnnualReport = async (year) => {
 };
 
     useEffect(() => {
-        if (activeSubPage === 'monthly') {
-            handleFetchReport(reportMonth);
-        }
-    }, [activeSubPage, reportMonth]);
+        handleFetchReport(reportMonth);
+    }, [reportMonth]);
 
     useEffect(() => {
-        if (activeSubPage === 'annual') {
+        if (activeTab === 'annual') {
             handleFetchAnnualReport(reportYear);
         }
-    }, [activeSubPage, reportYear]);
+    }, [activeTab, reportYear]);
 
+    // ZMIANA: Logika kliknięcia przycisku "+Sprzedaż"
     const handleAddSaleClick = () => {
         const nextDate = findNextAvailableDate(reportMonth, salesData?.entries);
         setDefaultSaleDate(nextDate);
         setEditingSale(null);
         setSaleModalOpen(true);
     };
+
     const handleSaveSale = async (saleData) => {
         const total = parseFloat(String(saleData.totalAmount).replace(',', '.'));
         if (isNaN(total) || total < 0) {
@@ -313,6 +299,7 @@ const handleFetchAnnualReport = async (year) => {
             setIsLoading(false);
         }
     };
+    
     const handleDeleteSale = async (saleId, saleDate) => {
         if (window.confirm(`Czy na pewno chcesz usunąć wpis sprzedaży z dnia ${saleDate}? Tej operacji nie można cofnąć.`)) {
             setIsLoading(true);
@@ -328,6 +315,7 @@ const handleFetchAnnualReport = async (year) => {
             }
         }
     };
+
     const handleSaveSettlement = async (data) => {
         setIsLoading(true);
         const { settlementMonth, ...dataToSave } = data;
@@ -350,6 +338,7 @@ const handleFetchAnnualReport = async (year) => {
             setIsLoading(false);
         }
     };
+
     const handleDeleteSettlement = async () => {
         const monthName = new Date(reportMonth + '-02').toLocaleString('pl-PL', { month: 'long', year: 'numeric' });
         if (window.confirm(`Czy na pewno chcesz usunąć całe rozliczenie za ${monthName}? Tej operacji nie można cofnąć.`)) {
@@ -366,12 +355,13 @@ const handleFetchAnnualReport = async (year) => {
             }
         }
     };
-const handleExportToCsv = () => {
+
+    const handleExportToCsv = () => {
     let csvContent = "\uFEFF"; 
     let fileName = 'raport_sprzedazy.csv';
     const months = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 
-    if (activeSubPage === 'monthly' && salesData?.entries.length > 0) {
+    if (activeTab === 'monthly' && salesData?.entries.length > 0) {
         fileName = `raport_sprzedazy_miesieczny_${reportMonth}.csv`;
         csvContent += "Data;Gotówka;Terminal;Przelew;Razem\r\n";
         
@@ -386,7 +376,7 @@ const handleExportToCsv = () => {
             csvContent += row + "\r\n";
         });
 
-    } else if (activeSubPage === 'annual' && annualData?.monthlyBreakdown) {
+    } else if (activeTab === 'annual' && annualData?.monthlyBreakdown) {
         fileName = `raport_sprzedazy_roczny_${reportYear}.csv`;
         csvContent += "Miesiąc;Gotówka;Terminal;Przelew;Suma\r\n";
 
@@ -419,76 +409,31 @@ const handleExportToCsv = () => {
         document.body.removeChild(link);
     }
 };
-const handlePrintRequest = (printType) => {
-    let printId, title, subtitle, formattedDate, header;
 
-    try {
-        switch (printType) {
-            case 'monthly-summary':
-                if (!salesData) throw new Error("Brak danych do wydrukowania.");
-                printId = 'monthly-sales-printable';
-                title = 'Miesięczny Raport Sprzedaży';
-                subtitle = `za miesiąc ${new Date(reportMonth + '-02').toLocaleString('pl-PL', { month: 'long', year: 'numeric' })}`;
-                const [year, month] = reportMonth.split('-');
-                formattedDate = new Date(year, month, 0).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + ' r.';
-                break;
-            
-            case 'monthly-details':
-                if (!salesData) throw new Error("Brak danych do wydrukowania.");
-                printId = 'monthly-details-printable';
-                title = 'Szczegółowy Miesięczny Raport Sprzedaży';
-                subtitle = `za miesiąc ${new Date(reportMonth + '-02').toLocaleString('pl-PL', { month: 'long', year: 'numeric' })}`;
-                const [yearD, monthD] = reportMonth.split('-');
-                formattedDate = new Date(yearD, monthD, 0).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + ' r.';
-                break;
+const handlePrintClick = () => {
+    if (activeTab === 'monthly' && salesData) {
+        const [year, month] = reportMonth.split('-');
+        const lastDayOfMonth = new Date(year, month, 0);
+        const formattedDate = lastDayOfMonth.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + ' r.';
+        
+        const subtitle = `za miesiąc ${new Date(reportMonth + '-02').toLocaleString('pl-PL', { month: 'long', year: 'numeric' })}`;
+        
+        const header = getPrintHeaderDetails('sales', formattedDate);
+        handlePrint('monthly-sales-printable', 'Miesięczny Raport Sprzedaży', subtitle, header);
 
-            case 'annual-summary':
-                if (!annualData) throw new Error("Brak danych do wydrukowania.");
-                printId = 'annual-sales-printable';
-                title = 'Roczny Raport Sprzedaży';
-                subtitle = `za rok ${reportYear}`;
-                formattedDate = new Date(reportYear, 11, 31).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + ' r.';
-                break;
+    } else if (activeTab === 'annual' && annualData) {
+        const lastDayOfYear = new Date(reportYear, 11, 31);
+        const formattedDate = lastDayOfYear.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + ' r.';
 
-            case 'annual-details':
-                if (!annualData) throw new Error("Brak danych do wydrukowania.");
-                printId = 'annual-details-printable';
-                title = 'Szczegółowy Roczny Raport Sprzedaży';
-                subtitle = `za rok ${reportYear}`;
-                formattedDate = new Date(reportYear, 11, 31).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + ' r.';
-                break;
+        const subtitle = `za rok ${reportYear}`;
 
-            default:
-                return;
-        }
+        const header = getPrintHeaderDetails('sales', formattedDate);
+        handlePrint('annual-sales-printable', 'Roczny Raport Sprzedaży', subtitle, header);
 
-        // Zakładając, że funkcja `getPrintHeaderDetails` jest dostępna w tym zakresie
-        header = getPrintHeaderDetails('sales', formattedDate); 
-        handlePrint(printId, title, subtitle, header);
-
-    } catch (error) {
-        alert(error.message);
+    } else {
+        alert("Brak danych do wydrukowania w tym widoku.");
     }
 };
-
-    const handleEditSettlement = () => {
-        setEditingSettlement(settlementData);
-        setSettlementModalOpen(true);
-    };
-
-    const pageTitles = {
-        dashboard: 'Pulpit',
-        monthly: 'Podsumowanie miesięczne',
-        annual: 'Podsumowanie roczne',
-        comparison: 'Porównanie',
-    };
-    
-    const breadcrumbItems = activeSubPage === 'dashboard'
-        ? [{ name: 'Sprzedaż' }]
-        : [
-            { name: 'Sprzedaż', onClick: () => setActiveSubPage('dashboard') },
-            { name: pageTitles[activeSubPage] || '' }
-          ];
 
 return (
     <div className="max-w-7xl mx-auto">
@@ -509,32 +454,30 @@ return (
             reportMonth={reportMonth} 
         />
         
-        <Breadcrumbs items={breadcrumbItems} />
-
-        {activeSubPage !== 'dashboard' && (
-            <SalesToolbar 
-                activeTab={activeSubPage}
-                reportMonth={reportMonth}
-                onMonthChange={setReportMonth}
-                reportYear={reportYear}
-                onYearChange={setReportYear}
-                onAddSaleClick={handleAddSaleClick}
-                onPrintRequest={handlePrintRequest}
-                handleExport={handleExportToCsv}
-                salesData={salesData}
-                annualData={annualData}
-            />
-        )}
+        <SalesToolbar 
+            activeTab={activeTab}
+            reportMonth={reportMonth}
+            onMonthChange={setReportMonth}
+            reportYear={reportYear}
+            onYearChange={setReportYear}
+            onAddSaleClick={handleAddSaleClick}
+            handlePrint={handlePrint}
+            salesData={salesData}
+            annualData={annualData}
+        />
+        
+        <div className="flex border-b mb-6">
+            <button onClick={() => setActiveTab('monthly')} className={`${SHARED_STYLES.tabs.base} ${activeTab === 'monthly' ? SHARED_STYLES.tabs.active : SHARED_STYLES.tabs.inactive}`}>Podsumowanie miesięczne</button>
+            <button onClick={() => setActiveTab('annual')} className={`${SHARED_STYLES.tabs.base} ${activeTab === 'annual' ? SHARED_STYLES.tabs.active : SHARED_STYLES.tabs.inactive}`}>Podsumowanie roczne</button>
+            <button onClick={() => setActiveTab('comparison')} className={`${SHARED_STYLES.tabs.base} ${activeTab === 'comparison' ? SHARED_STYLES.tabs.active : SHARED_STYLES.tabs.inactive}`}>Porównanie</button>
+        </div>
         
         <MessageBox message={message.text} type={message.type} onDismiss={() => setMessage({ text: '', type: 'info' })} />
         
-        {/* NOWA LOGIKA RENDEROWANIA */}
-        <div className="mt-6">
-            {activeSubPage === 'dashboard' && <SalesDashboard onNavigate={setActiveSubPage} />}
-
-            {activeSubPage === 'monthly' && (
+        <div>
+            {activeTab === 'monthly' && (
                 <>
-                   {isLoading ? <LoadingSpinner /> : !salesData || !salesData.entries ? (
+                    {isLoading ? <LoadingSpinner /> : !salesData || !salesData.entries ? (
                         <div className="p-8 bg-white rounded-lg shadow-md text-center text-gray-500">
                             <i className="fa-solid fa-cash-register fa-3x mb-4 text-gray-300"></i>
                             <p>Brak danych o sprzedaży w wybranym miesiącu.</p>
@@ -542,15 +485,56 @@ return (
                         </div>
                     ) : (
                         <div className="space-y-6">
+                            {/* SEKCJA KART KPI */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <FluentKpiCard title="Sprzedaż w tym miesiącu" value={formatCurrency(salesData.kpi.totalSales.value)} icon={<Money24Regular />} footer={<ComparisonIndicator value={salesData.kpi.totalSales.mom} diff={salesData.kpi.totalSales.diff} />} />
-                                <FluentKpiCard title="Średnia dzienna" value={formatCurrency(salesData.kpi.averageDailySales.value)} icon={<DataTrending24Regular />} footer={<ComparisonIndicator value={salesData.kpi.averageDailySales.mom} diff={salesData.kpi.averageDailySales.diff.toFixed(1)}/>} />
-                                <FluentKpiCard title="Najlepszy dzień" value={formatCurrency(salesData.kpi.bestDay.amount)} icon={<Trophy24Regular />} footer={ salesData.kpi.bestDay.date ? `Data: ${salesData.kpi.bestDay.date}` : 'Brak danych w tym miesiącu' } />
-                                <PaymentSplitCard title="Podział płatności" data={salesData.kpi} />
-                                <FluentKpiCard title="Sprzedaż w tym roku" value={formatCurrency(salesData.kpi.ytdTotalSales.value)} icon={<CalendarCheckmark24Regular />} footer={<ComparisonIndicator value={salesData.kpi.ytdTotalSales.yoy} diff={salesData.kpi.ytdTotalSales.diff} />} />
-                                <FluentKpiCard title="Stan gotówki w kasie" value={formatCurrency(salesData.kpi.cashBalance)} icon={<Wallet24Regular />} footer="Obliczono na koniec miesiąca" />
+                                <KpiCard title="Sprzedaż w tym miesiącu" value={formatCurrency(salesData.kpi.totalSales.value)} icon="fa-coins" footer={<ComparisonIndicator value={salesData.kpi.totalSales.mom} diff={salesData.kpi.totalSales.diff} />} />
+                                <KpiCard title="Średnia dzienna" value={formatCurrency(salesData.kpi.averageDailySales.value)} icon="fa-chart-line" footer={<ComparisonIndicator value={salesData.kpi.averageDailySales.mom} diff={salesData.kpi.averageDailySales.diff.toFixed(1)}/>} />
+                                <KpiCard title="Najlepszy dzień" value={formatCurrency(salesData.kpi.bestDay.amount)} icon="fa-trophy" footer={ salesData.kpi.bestDay.date ? `Data: ${salesData.kpi.bestDay.date}` : 'Brak danych w tym miesiącu' } />
+                                <div className="bg-white p-4 rounded-lg shadow-md">
+                                    <div className="flex items-center justify-between"><p className="text-sm font-semibold text-gray-500">Podział płatności</p><i className="fa-solid fa-credit-card text-gray-300"></i></div>
+                                    <div className="space-y-2 mt-2">
+                                        {salesData.kpi.totalSales.value > 0 ? (
+                                            <>
+                                                <div className="text-sm">
+                                                    <div className="flex justify-between font-semibold text-xs mb-0.5"><p>Gotówka ({salesData.kpi.paymentSplit.cash.percent}%)</p><p>{formatCurrency(salesData.kpi.paymentSplit.cash.amount)}</p></div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-green-500 h-1.5 rounded-full" style={{width: `${salesData.kpi.paymentSplit.cash.percent}%`}}></div></div>
+                                                </div>
+                                                <div className="text-sm">
+                                                    <div className="flex justify-between font-semibold text-xs mb-0.5"><p>Terminal ({salesData.kpi.paymentSplit.card.percent}%)</p><p>{formatCurrency(salesData.kpi.paymentSplit.card.amount)}</p></div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-blue-500 h-1.5 rounded-full" style={{width: `${salesData.kpi.paymentSplit.card.percent}%`}}></div></div>
+                                                </div>
+                                                <div className="text-sm">
+                                                    <div className="flex justify-between font-semibold text-xs mb-0.5"><p>Przelew ({salesData.kpi.paymentSplit.invoice.percent}%)</p><p>{formatCurrency(salesData.kpi.paymentSplit.invoice.amount)}</p></div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-yellow-500 h-1.5 rounded-full" style={{width: `${salesData.kpi.paymentSplit.invoice.percent}%`}}></div></div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-center text-sm text-gray-400 py-4"><p>Brak danych o płatnościach w tym miesiącu.</p></div>
+                                        )}
+                                    </div>
+                                </div>
+                                <KpiCard title="Sprzedaż w tym roku" value={formatCurrency(salesData.kpi.ytdTotalSales.value)} icon="fa-calendar-check" footer={<ComparisonIndicator value={salesData.kpi.ytdTotalSales.yoy} diff={salesData.kpi.ytdTotalSales.diff} />} />
+                                <KpiCard title="Stan gotówki w kasie" value={formatCurrency(salesData.kpi.cashBalance)} icon="fa-wallet" footer="Obliczono na koniec miesiąca" />
                             </div>
-                            <SalesSettlement view="monthly" data={settlementData} onEdit={handleEditSettlement} onDelete={handleDeleteSettlement} />
+
+                            {/* SEKCJA ROZLICZENIA MIESIĘCZNEGO */}
+                            <div className="bg-white p-4 rounded-lg shadow-md">
+                                <div className="flex justify-between items-center">
+                                    <div><h3 className="text-lg font-bold text-gray-700">Rozliczenie miesięczne</h3></div>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => { setEditingSettlement(settlementData); setSettlementModalOpen(true); }} className={SHARED_STYLES.toolbar.iconButton} title={settlementData ? "Edytuj rozliczenie" : "Dodaj rozliczenie"}><i className={`fa-solid ${settlementData ? 'fa-pencil' : 'fa-plus'}`}></i></button>
+                                        <button onClick={handleDeleteSettlement} className={`${SHARED_STYLES.toolbar.iconButton} hover:text-red-600`} title="Usuń rozliczenie" disabled={!settlementData}><i className="fa-solid fa-trash-can"></i></button>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4 text-center">
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">Zakup netto</p><p className="font-bold">{formatCurrency(settlementData?.purchaseNet)}</p></div>
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">Marża</p><p className="font-bold">{formatCurrency(settlementData?.margin)}</p></div>
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">Sprzedaż netto</p><p className="font-bold">{formatCurrency(settlementData?.salesNet)}</p></div>
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">VAT</p><p className="font-bold">{formatCurrency(settlementData?.vat)}</p></div>
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">Sprzedaż brutto</p><p className="font-bold">{formatCurrency(settlementData?.salesGross)}</p></div>
+                                    <div className="bg-blue-50 p-2 rounded-md border border-blue-200"><p className="text-xs text-blue-800">Wpłata bankowa</p><p className="font-bold text-blue-800">{formatCurrency(settlementData?.bankDeposit)}</p></div>
+                                </div>
+                            </div>
 
                             {/* SEKCJA WYKRESU */}
                             {salesData.kpi.totalSales.value > 0 && (
@@ -599,22 +583,50 @@ return (
                 </>
             )}
             
-            {activeSubPage === 'annual' && (
+            {activeTab === 'annual' && (
                 <>
-                     {isLoading ? <LoadingSpinner /> : !annualData ? (
+                    {isLoading ? <LoadingSpinner /> : !annualData ? (
                         <div className="p-8 bg-white rounded-lg shadow-md text-center text-gray-500">
                             <i className="fa-solid fa-chart-pie fa-3x mb-4 text-gray-300"></i>
                             <p>Brak danych o sprzedaży w wybranym roku.</p>
                         </div>
                     ) : (
                         <div className="space-y-6">
+                            {/* SEKCJA ROCZNYCH KART KPI */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <FluentKpiCard title="Sprzedaż w tym roku" value={formatCurrency(annualData.kpi.totalAnnualSales.value)} icon={<Money24Regular />} footer={<ComparisonIndicator value={annualData.kpi.totalAnnualSales.yoy} diff={annualData.kpi.totalAnnualSales.diff} />} />
-                                <FluentKpiCard title="Średnia miesięczna" value={formatCurrency(annualData.kpi.averageMonthlySales.value)} icon={<DataTrending24Regular />} footer={<ComparisonIndicator value={annualData.kpi.averageMonthlySales.yoy} diff={annualData.kpi.averageMonthlySales.diff} />} />
-                                <FluentKpiCard title="Najlepszy miesiąc" value={formatCurrency(annualData.kpi.bestMonth.amount)} icon={<Trophy24Regular />} footer={`Miesiąc: ${annualData.kpi.bestMonth.name}`} />
-                                <PaymentSplitCard title="Roczny podział płatności" data={annualData.kpi} />
+                                <KpiCard title="Sprzedaż w tym roku" value={formatCurrency(annualData.kpi.totalAnnualSales.value)} icon="fa-coins" footer={<ComparisonIndicator value={annualData.kpi.totalAnnualSales.yoy} diff={annualData.kpi.totalAnnualSales.diff} />} />
+                                <KpiCard title="Średnia miesięczna" value={formatCurrency(annualData.kpi.averageMonthlySales.value)} icon="fa-chart-line" footer={<ComparisonIndicator value={annualData.kpi.averageMonthlySales.yoy} diff={annualData.kpi.averageMonthlySales.diff} />} />
+                                <KpiCard title="Najlepszy miesiąc" value={formatCurrency(annualData.kpi.bestMonth.amount)} icon="fa-trophy" footer={`Miesiąc: ${annualData.kpi.bestMonth.name}`} />
+                                <div className="bg-white p-4 rounded-lg shadow-md">
+                                    <div className="flex items-center justify-between"><p className="text-sm font-semibold text-gray-500">Roczny podział płatności</p><i className="fa-solid fa-credit-card text-gray-300"></i></div>
+                                    <div className="space-y-2 mt-2">
+                                         <div className="text-sm">
+                                            <div className="flex justify-between font-semibold text-xs mb-0.5"><p>Gotówka ({annualData.kpi.paymentSplit.cash.percent}%)</p><p>{formatCurrency(annualData.kpi.paymentSplit.cash.amount)}</p></div>
+                                            <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-green-500 h-1.5 rounded-full" style={{width: `${annualData.kpi.paymentSplit.cash.percent}%`}}></div></div>
+                                        </div>
+                                        <div className="text-sm">
+                                            <div className="flex justify-between font-semibold text-xs mb-0.5"><p>Terminal ({annualData.kpi.paymentSplit.card.percent}%)</p><p>{formatCurrency(annualData.kpi.paymentSplit.card.amount)}</p></div>
+                                            <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-blue-500 h-1.5 rounded-full" style={{width: `${annualData.kpi.paymentSplit.card.percent}%`}}></div></div>
+                                        </div>
+                                        <div className="text-sm">
+                                            <div className="flex justify-between font-semibold text-xs mb-0.5"><p>Przelew ({annualData.kpi.paymentSplit.invoice.percent}%)</p><p>{formatCurrency(annualData.kpi.paymentSplit.invoice.amount)}</p></div>
+                                            <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-yellow-500 h-1.5 rounded-full" style={{width: `${annualData.kpi.paymentSplit.invoice.percent}%`}}></div></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <SalesSettlement view="annual" data={annualData} />
+                            {/* SEKCJA ROCZNEGO PODSUMOWANIA ROZLICZEŃ */}
+                            <div className="bg-white p-4 rounded-lg shadow-md">
+                                <h3 className="text-lg font-bold text-gray-700">Roczne podsumowanie rozliczeń</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4 text-center">
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">Zakup netto</p><p className="font-bold">{formatCurrency(annualData.kpi.settlementSummary.purchaseNet)}</p></div>
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">Marża</p><p className="font-bold">{formatCurrency(annualData.kpi.settlementSummary.margin)}</p></div>
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">Sprzedaż netto</p><p className="font-bold">{formatCurrency(annualData.kpi.settlementSummary.salesNet)}</p></div>
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">VAT</p><p className="font-bold">{formatCurrency(annualData.kpi.settlementSummary.vat)}</p></div>
+                                    <div className="bg-gray-50 p-2 rounded-md"><p className="text-xs text-gray-500">Sprzedaż brutto</p><p className="font-bold">{formatCurrency(annualData.kpi.settlementSummary.salesGross)}</p></div>
+                                    <div className="bg-blue-50 p-2 rounded-md border border-blue-200"><p className="text-xs text-blue-800">Wpłaty bankowe</p><p className="font-bold text-blue-800">{formatCurrency(annualData.kpi.settlementSummary.bankDeposit)}</p></div>
+                                </div>
+                            </div>
                             {/* SEKCJA ROCZNEGO WYKRESU */}
                             <div>
                                 <h3 className="text-lg font-bold text-gray-700">Sprzedaż w poszczególnych miesiącach</h3>
@@ -655,7 +667,7 @@ return (
                 </>
             )}
 
-            {activeSubPage === 'comparison' && ( <SalesComparisonTab /> )}
+            {activeTab === 'comparison' && ( <SalesComparisonTab /> )}
 
             <div className="hidden">
                 <div id="monthly-sales-printable">{salesData && <PrintableMonthlyReport salesData={{...salesData, settlementData}} />}</div>

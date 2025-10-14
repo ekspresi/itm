@@ -32,6 +32,7 @@ export default function SideMenu({ isCollapsed, setCollapsed, isMobileView, onLo
         items: [
             { id: 'schedule', label: 'Harmonogram sal', icon: 'fa-solid fa-calendar-week' }, 
             { id: 'inventory', label: 'Inwentaryzacja', icon: 'fa-solid fa-boxes-stacked' },
+            { id: 'orangeLab', label: 'Pracownia Orange', icon: 'fa-solid fa-desktop' },
         ]
     }
     ];

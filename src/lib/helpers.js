@@ -173,34 +173,69 @@ export const formatPhoneNumber = (phoneStr) => {
     return phoneStr;
 };
 
-// NOWOŚĆ: Funkcja sprawdzająca, czy obiekt jest otwarty w danym momencie
+/**
+ * Sprawdza, czy miejsce jest otwarte w danym momencie, na podstawie surowych danych o okresach.
+ * Ta funkcja jest bardziej niezawodna niż poleganie na fladze `openNow` od Google.
+ * @param {object} place - Obiekt miejsca z Google Places API (z polem opening_hours).
+ * @returns {boolean} - True, jeśli otwarte, false w przeciwnym razie.
+ */
 export const isOpenNow = (place) => {
-    if (!place.opening_hours || !place.opening_hours.periods) {
-        return false; // Brak danych o godzinach
+    // Zwróć false, jeśli brakuje kluczowych danych o godzinach otwarcia.
+    if (!place?.opening_hours?.periods) {
+        return false;
     }
-    if (place.opening_hours.openNow !== undefined) {
-        return place.opening_hours.openNow; // Jeśli Google podało gotową flagę
-    }
-    
+
     try {
         const now = new Date();
-        // Dzień tygodnia: 0 = Niedziela, 1 = Poniedziałek, ..., 6 = Sobota
-        const dayOfWeek = now.getDay();
+        const dayOfWeek = now.getDay(); // 0 = Niedziela, 1 = Poniedziałek, ..., 6 = Sobota
         const nowInMinutes = now.getHours() * 60 + now.getMinutes();
 
         for (const period of place.opening_hours.periods) {
-            if (period.open.day === dayOfWeek) {
-                const openInMinutes = period.open.hour * 60 + period.open.minute;
-                const closeInMinutes = period.close.hour * 60 + period.close.minute;
+            // Obsługa obiektów otwartych 24/7 (bez daty zamknięcia)
+            if (period.open && !period.close) {
+                if (period.open.day === dayOfWeek) {
+                    return true;
+                }
+                continue;
+            }
 
-                if (nowInMinutes >= openInMinutes && nowInMinutes < closeInMinutes) {
-                    return true; // Znaleziono pasujący przedział czasowy
+            // Upewnij się, że mamy komplet danych dla okresu
+            if (!period.open || !period.close) {
+                continue;
+            }
+
+            const openDay = period.open.day;
+            const openInMinutes = period.open.hour * 60 + period.open.minute;
+            const closeDay = period.close.day;
+            const closeInMinutes = period.close.hour * 60 + period.close.minute;
+
+            // Przypadek 1: Otwarcie i zamknięcie tego samego dnia
+            // np. otwarte Pn 09:00 - Pn 17:00, a teraz jest Pn 12:00
+            if (openDay === closeDay) {
+                if (dayOfWeek === openDay && nowInMinutes >= openInMinutes && nowInMinutes < closeInMinutes) {
+                    return true;
+                }
+            }
+            // Przypadek 2: Godziny "przez północ" (otwarcie jednego dnia, zamknięcie następnego)
+            else {
+                // Sprawdzenie, czy jesteśmy w dniu otwarcia, po godzinie otwarcia
+                // np. otwarte Pn 22:00 - Wt 02:00, a teraz jest Pn 23:00
+                if (dayOfWeek === openDay && nowInMinutes >= openInMinutes) {
+                    return true;
+                }
+                // Sprawdzenie, czy jesteśmy w dniu zamknięcia, przed godziną zamknięcia
+                // np. otwarte Pn 22:00 - Wt 02:00, a teraz jest Wt 01:00
+                if (dayOfWeek === closeDay && nowInMinutes < closeInMinutes) {
+                    return true;
                 }
             }
         }
-        return false; // Zamknięte
+
+        // Jeśli żaden z okresów nie pasował, obiekt jest zamknięty.
+        return false;
+
     } catch (e) {
-        console.error("Błąd parsowania godzin otwarcia:", e);
+        console.error("Błąd podczas parsowania godzin otwarcia:", e);
         return false;
     }
 };
@@ -287,4 +322,17 @@ export const timeToMinutes = (timeStr) => {
     if (!timeStr) return 0;
     const [hours, minutes] = timeStr.split(':').map(Number);
     return hours * 60 + minutes;
+};
+
+/**
+ * Zwraca polską nazwę dnia tygodnia.
+ * @param {number} dayIndex - Indeks dnia (0=Poniedziałek, ..., 6=Niedziela).
+ * @param {boolean} long - Czy zwrócić pełną nazwę (true) czy skróconą (false).
+ * @returns {string} - Nazwa dnia.
+ */
+export const getDayName = (dayIndex, long = true) => {
+    const days = long 
+        ? ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
+        : ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Niedz"];
+    return days[dayIndex] || '';
 };

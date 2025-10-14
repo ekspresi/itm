@@ -24,6 +24,7 @@ import TextsModule from './modules/texts/TextsModule';
 import LeafletsModule from './modules/leaflets/LeafletsModule';
 import ScheduleModule from './modules/schedule/ScheduleModule';
 import InventoryModule from './modules/inventory/InventoryModule';
+import OrangeLabModule from './modules/orangeLab/OrangeLabModule';
 
 const useStyles = makeStyles({
     main: {
@@ -170,6 +171,7 @@ useEffect(() => {
               {activeModule === 'leaflets' && <LeafletsModule />}
               {activeModule === 'schedule' && <ScheduleModule handlePrint={handlePrint} />}
               {activeModule === 'inventory' && <InventoryModule handlePrint={handlePrint} />}
+              {activeModule === 'orangeLab' && <OrangeLabModule />}
                     </main>
                 </div>
             </div>

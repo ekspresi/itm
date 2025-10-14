@@ -1,14 +1,6 @@
 import React from 'react';
-import {
-    Menu,
-    MenuTrigger,
-    MenuList,
-    MenuItem,
-    MenuPopover,
-    Button,
-} from '@fluentui/react-components';
-import { MoreHorizontal24Regular } from '@fluentui/react-icons';
-import { isOpenNow } from '../../lib/helpers';
+import { SHARED_STYLES } from '../../lib/helpers';
+import { isOpenNow } from '../../lib/helpers'; // Importujemy funkcję sprawdzającą godziny
 
 export default function GastronomyTile({ place, onEdit, onDelete, onDetailsClick }) {
     const imageUrl = place.thumbnailUrl || place.google_photo_url;
@@ -19,7 +11,7 @@ export default function GastronomyTile({ place, onEdit, onDelete, onDetailsClick
             <div onClick={() => onDetailsClick(place)} className="cursor-pointer p-4">
                 <div className="flex gap-4">
                     <div className="w-24 h-24 bg-gray-200 rounded-md overflow-hidden flex-shrink-0">
-                        {imageUrl ?
+                        {imageUrl ? 
                             <img src={imageUrl} alt={place.name} className="w-full h-full object-cover" /> :
                             <div className="w-full h-full flex items-center justify-center"><i className="fa-solid fa-utensils fa-2x text-gray-400"></i></div>
                         }
@@ -37,7 +29,7 @@ export default function GastronomyTile({ place, onEdit, onDelete, onDetailsClick
             </div>
 
             <div className="border-t px-4 py-2 flex items-center justify-between">
-                 <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-3 text-sm">
                     <div title={isOpen ? "Otwarte teraz" : "Obecnie zamknięte"} className={isOpen ? 'text-blue-600' : 'text-gray-400'}>
                         <i className={`fa-solid ${isOpen ? 'fa-door-open' : 'fa-door-closed'}`}></i>
                     </div>
@@ -46,18 +38,11 @@ export default function GastronomyTile({ place, onEdit, onDelete, onDetailsClick
                         <span>{place.rating || '-'}</span>
                     </div>
                 </div>
-                <Menu>
-                    <MenuTrigger disableButtonEnhancement>
-                        <Button appearance="transparent" icon={<MoreHorizontal24Regular />} />
-                    </MenuTrigger>
-                    <MenuPopover>
-                        <MenuList>
-                            <MenuItem onClick={() => onDetailsClick(place)}>Zobacz szczegóły</MenuItem>
-                            <MenuItem onClick={() => onEdit(place)}>Edytuj</MenuItem>
-                            <MenuItem onClick={() => onDelete(place.id)}>Usuń</MenuItem>
-                        </MenuList>
-                    </MenuPopover>
-                </Menu>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => onDetailsClick(place)} className={SHARED_STYLES.toolbar.iconButton} style={{height: '32px', width: '32px'}} title="Podgląd"><i className="fa-solid fa-eye text-sm"></i></button>
+                    <button onClick={() => onEdit(place)} className={SHARED_STYLES.toolbar.iconButton} style={{height: '32px', width: '32px'}} title="Edytuj"><i className="fa-solid fa-pencil text-sm"></i></button>
+                    <button onClick={() => onDelete(place.id)} className={`${SHARED_STYLES.toolbar.iconButton} hover:text-red-600`} style={{height: '32px', width: '32px'}} title="Usuń"><i className="fa-solid fa-trash-can text-sm"></i></button>
+                </div>
             </div>
         </div>
     );
