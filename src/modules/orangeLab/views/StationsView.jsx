@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { db, firebaseApi } from '../../../lib/firebase'; // <--- Poprawiony import
+import { db, firebaseApi } from '../../../lib/firebase';
 import { Button, Card, CardHeader } from "@fluentui/react-components";
 import { Add24Regular, Edit24Regular } from "@fluentui/react-icons";
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import StationModal from '../modals/StationModal';
 
-export default function StationsView() {
+// KROK 1: Odbieramy onStationClick jako props
+export default function StationsView({ onStationClick }) {
     const [allStations, setAllStations] = useState([]);
     const [allEquipment, setAllEquipment] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +14,6 @@ export default function StationsView() {
     const [selectedStation, setSelectedStation] = useState(null);
 
     useEffect(() => {
-        // Poprawiona składnia
         const stationsRef = db.collection(firebaseApi._getFullPath('stations'));
         const equipmentRef = db.collection(firebaseApi._getFullPath('gamingEquipment'));
 
@@ -70,22 +70,31 @@ export default function StationsView() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                  {allStations.map(station => (
-                    <Card key={station.id}>
-                        <CardHeader
-                            header={<div className="font-semibold text-base">{station.name}</div>}
-                            action={
-                                <Button icon={<Edit24Regular />} appearance="transparent" onClick={() => handleEdit(station)} />
-                            }
-                        />
-                        <div className="p-4 pt-0">
-                            <h4 className="font-semibold text-sm mb-1">Składniki stanowiska:</h4>
-                            <ul className="list-disc pl-5 text-sm">
-                                {(station.equipmentIds || []).map(id => (
-                                    <li key={id}>{getEquipmentName(id)}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    </Card>
+                     // KROK 1: Dodajemy onClick do całej karty i zmieniamy kursor
+                     <Card key={station.id} onClick={() => onStationClick(station.id)} style={{ cursor: 'pointer' }}>
+                         <CardHeader
+                             header={<div className="font-semibold text-base">{station.name}</div>}
+                             action={
+                                 // KROK 1: Zatrzymujemy propagację kliknięcia na przycisku edycji
+                                 <Button 
+                                     icon={<Edit24Regular />} 
+                                     appearance="transparent" 
+                                     onClick={(e) => {
+                                         e.stopPropagation();
+                                         handleEdit(station);
+                                     }} 
+                                 />
+                             }
+                         />
+                         <div className="p-4 pt-0">
+                             <h4 className="font-semibold text-sm mb-1">Składniki stanowiska:</h4>
+                             <ul className="list-disc pl-5 text-sm">
+                                 {(station.equipmentIds || []).map(id => (
+                                     <li key={id}>{getEquipmentName(id)}</li>
+                                 ))}
+                             </ul>
+                         </div>
+                     </Card>
                  ))}
             </div>
             {allStations.length === 0 && <p className="text-center p-8 text-neutral-foreground-2">Brak utworzonych stanowisk.</p>}

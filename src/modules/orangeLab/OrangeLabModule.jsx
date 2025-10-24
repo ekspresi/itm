@@ -10,30 +10,33 @@ import OrangeLabDashboard from './OrangeLabDashboard';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import LegoZone from './LegoZone';
 import GamerZone from './GamerZone';
+// KROK 3: Importujemy nowy komponent.
+import StationDetailsView from './views/StationDetailsView';
 
 export default function OrangeLabModule() {
     const [activeSubPage, setActiveSubPage] = useState('dashboard');
+    const [currentView, setCurrentView] = useState('stations');
+    const [selectedStationId, setSelectedStationId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [scheduleClasses, setScheduleClasses] = useState([]);
-    const [allRooms, setAllRooms] = useState([]); // <-- NOWY STAN NA SALE
+    const [allRooms, setAllRooms] = useState([]);
 
     useEffect(() => {
         const fetchScheduleData = async () => {
             setIsLoading(true);
             try {
-                // Pobieramy jednocześnie zajęcia i sale
                 const [allClasses, fetchedRooms] = await Promise.all([
                     firebaseApi.fetchCollection('classes'),
                     firebaseApi.fetchCollection('rooms')
                 ]);
 
-                const orangeLabClasses = allClasses.filter(c => 
-                    c.organizator === 'Inny' && 
-                    c.organizatorInny && 
+                const orangeLabClasses = allClasses.filter(c =>
+                    c.organizator === 'Inny' &&
+                    c.organizatorInny &&
                     c.organizatorInny.trim().toLowerCase() === 'pracownia orange'
                 );
                 setScheduleClasses(orangeLabClasses);
-                setAllRooms(fetchedRooms || []); // <-- ZAPISUJEMY SALE W STANIE
+                setAllRooms(fetchedRooms || []);
             } catch (error) {
                 console.error("Błąd pobierania danych z harmonogramu:", error);
             } finally {
@@ -44,6 +47,16 @@ export default function OrangeLabModule() {
         fetchScheduleData();
     }, []);
 
+    const handleStationClick = (stationId) => {
+        setSelectedStationId(stationId);
+        setCurrentView('stationDetails');
+    };
+
+    // KROK 3: Funkcja do powrotu do listy stanowisk.
+    const handleBackToStations = () => {
+        setSelectedStationId(null);
+        setCurrentView('stations');
+    };
 
     const pageTitles = {
         dashboard: 'Pulpit',
@@ -78,10 +91,22 @@ export default function OrangeLabModule() {
             <div className="flex-grow">
                 {isLoading ? <LoadingSpinner /> : (
                     <>
-                        {/* Przekazujemy sale jako props do pulpitu */}
                         {activeSubPage === 'dashboard' && <OrangeLabDashboard onNavigate={setActiveSubPage} classes={scheduleClasses} allRooms={allRooms} />}
                         {activeSubPage === 'legoZone' && <LegoZone />}
-                        {activeSubPage === 'gamerZone' && <GamerZone />}
+                        {activeSubPage === 'gamerZone' && (
+                            <>
+                                {currentView === 'stations' && (
+                                    <GamerZone onStationClick={handleStationClick} />
+                                )}
+                                {/* KROK 3: Podmieniamy placeholder na nasz nowy komponent. */}
+                                {currentView === 'stationDetails' && (
+                                    <StationDetailsView
+                                        stationId={selectedStationId}
+                                        onBack={handleBackToStations}
+                                    />
+                                )}
+                            </>
+                        )}
                     </>
                 )}
             </div>

@@ -1,19 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { db, firebaseApi } from '../../../lib/firebase'; // <--- DODAJ IMPORT 'db'
-import { Button } from "@fluentui/react-components";
-import { Add24Regular } from "@fluentui/react-icons";
-import LoadingSpinner from '../../../components/LoadingSpinner';
+import React from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { db, firebaseApi } from '../../../lib/firebase';
+import { Button, Spinner, makeStyles, tokens } from '@fluentui/react-components'; // KROK 5: Zmiana importów
+import { Add24Regular } from '@fluentui/react-icons';
 import LegoSetModal from '../modals/LegoSetModal';
+// KROK 5: Import nowej karty i MessageBoxa
+import CondensedGridCard from '../../../components/views/CondensedGridCard';
+import MessageBox from '../../../components/MessageBox';
+
+// KROK 5: Dodajemy prosty useStyles, jeśli go nie było
+const useStyles = makeStyles({
+    toolbar: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+        marginBottom: tokens.spacingVerticalL,
+    },
+});
 
 export default function SetsView() {
+    const styles = useStyles(); // KROK 5: Używamy stylów
     const [allSets, setAllSets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSet, setSelectedSet] = useState(null);
 
+    // KROK 5: Stany dla dialogu usuwania
+    const [isMessageBoxOpen, setIsMessageBoxOpen] = useState(false);
+    const [setToDelete, setSetToDelete] = useState(null);
+
     useEffect(() => {
         const setsCollectionRef = db.collection(firebaseApi._getFullPath('legoSets'));
-        const unsubscribe = setsCollectionRef.onSnapshot((snapshot) => {
+        const unsubscribe = setsCollectionRef.orderBy('name', 'asc').onSnapshot((snapshot) => {
             const setsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAllSets(setsData);
             setIsLoading(false);
@@ -21,7 +38,6 @@ export default function SetsView() {
             console.error("Błąd pobierania zestawów LEGO:", error);
             setIsLoading(false);
         });
-
         return () => unsubscribe();
     }, []);
 
@@ -35,8 +51,28 @@ export default function SetsView() {
         setIsModalOpen(true);
     };
 
+    // KROK 5: Funkcje do obsługi usuwania
+    const handleOpenDeleteDialog = (set) => {
+        setSetToDelete(set);
+        setIsMessageBoxOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (setToDelete) {
+            try {
+                await firebaseApi.deleteDocument('legoSets', setToDelete.id);
+                console.log("Usunięto zestaw LEGO:", setToDelete.id);
+            } catch (error) {
+                console.error("Błąd podczas usuwania zestawu LEGO:", error);
+            }
+        }
+        setIsMessageBoxOpen(false);
+        setSetToDelete(null);
+    };
+
     if (isLoading) {
-        return <LoadingSpinner />;
+        // KROK 5: Użycie oficjalnego komponentu Spinner
+        return <Spinner label="Ładowanie bazy zestawów LEGO..." />;
     }
 
     return (
@@ -48,38 +84,35 @@ export default function SetsView() {
                     initialData={selectedSet}
                 />
             )}
-            <div className="flex justify-end mb-4">
+
+            {/* KROK 5: Dodanie globalnego MessageBoxa */}
+            <MessageBox
+                open={isMessageBoxOpen}
+                title="Potwierdź usunięcie"
+                content={`Czy na pewno chcesz usunąć zestaw "${setToDelete?.name || ''}"? Tej operacji nie można cofnąć.`}
+                onConfirm={confirmDelete}
+                onCancel={() => setIsMessageBoxOpen(false)}
+            />
+
+            <div className={styles.toolbar}>
                 <Button icon={<Add24Regular />} appearance="primary" onClick={handleAddNew}>
                     Dodaj nowy zestaw
                 </Button>
             </div>
-            <div className="overflow-x-auto bg-neutral-background-1 rounded-lg shadow-sm">
-                <table className="min-w-full divide-y divide-neutral-stroke-2">
-                    <thead className="bg-neutral-background-2">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Nazwa</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Numer / Seria</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Właściciel</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Akcje</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-stroke-1">
-                        {allSets.map((set) => (
-                            <tr key={set.id}>
-                                <td className="px-6 py-4 whitespace-nowrap font-semibold">{set.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{set.number} / {set.series}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{set.owner}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right">
-                                    <Button appearance="subtle" onClick={() => handleEdit(set)}>
-                                        Edytuj
-                                    </Button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                 {allSets.length === 0 && <p className="text-center p-8 text-neutral-foreground-2">Brak dodanych zestawów LEGO.</p>}
+
+            {/* KROK 5: Zmiana siatki na 4 kolumny i użycie CondensedGridCard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {allSets.map((set) => (
+                    <CondensedGridCard
+                        key={set.id}
+                        title={set.name}
+                        imageUrl={set.imageUrl} // Zakładam, że pole nazywa się imageUrl
+                        onEditClick={() => handleEdit(set)}
+                        onDeleteClick={() => handleOpenDeleteDialog(set)}
+                    />
+                ))}
             </div>
+             {allSets.length === 0 && <p className="text-center p-8 text-neutral-foreground-2">Brak dodanych zestawów LEGO.</p>}
         </div>
     );
 }
